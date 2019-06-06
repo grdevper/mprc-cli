@@ -13,6 +13,7 @@ const rm = require('rimraf').sync;
 const gitclone = require('git-clone');
 const Download = require("download");
 const os = require('os');
+const fs = require('fs');
 
 const tplPath = path.resolve(__dirname, '../template.json');
 const tplJson = require(tplPath);
@@ -43,7 +44,7 @@ const to = path.resolve(rawName || '.');
 const inPlace = !rawName || rawName === '.';
 const tmpJson = tplJson[template];
 const isGit = tmpJson.remoteType === 'git';
-const clone = program.clone || false;
+const dest = `${path.resolve(process.cwd())}/${rawName}`;
 
 if (!tmpJson) {
     console.log(chalk.red(`template.json里没有${template}的模板信息，请添加！`));
@@ -62,13 +63,24 @@ if (exists(to)) {
           '在当前目录生成新项目？' :
           '该目录已存在，是否继续？',
       name: 'ok'
-    }], function (res) {
+    }]).then( function (res) {
         if (res.ok) {
             run();
         }
     })
 } else {
-    run();
+    const spinner = ora('正在创建目录');
+    spinner.start();
+
+    fs.mkdir(dest, function(err){
+        spinner.stop();
+        if(err){
+            console.log( chalk.red('创建文件夹出错') );
+        }else{
+            console.log( chalk.green(`${rawName} 目录创建成功`));
+            run();
+        }
+    });
 }
 
 //构建
@@ -100,7 +112,7 @@ function checkVersion(callback) {
     }
 
     request({
-        url: '',
+        url: 'https://registry.npmjs.org/mprc-cli',
         timeout: 1000
     }, function (err, res, body) {
         if (!err && res.statusCode === 200) {
@@ -128,7 +140,7 @@ function downloadFromNpm(tmpJson) {
   child_process.exec(cmd, function (err, stdout, stderr) {
     spinner.stop();
     process.on('exit', function () {
-        rm(process.cwd() + '/node_modules/');
+        rm(dest + '/node_modules/');
     })
     if (err) {
       return  console.log(chalk.red('下载模板失败： ' + template + ': ' + err.message.trim()));
@@ -143,7 +155,6 @@ function downloadFromRemote(tmpJson) {
   const spinner = ora('正在下载模版');
   spinner.start();
 
-  const dest = path.join(process.cwd())
   const repo = normalize(tmpJson.url);
   const url = tmpJson.url;
 
@@ -151,20 +162,52 @@ function downloadFromRemote(tmpJson) {
       gitclone(url, dest, { checkout: repo.checkout }, function(err) {
          spinner.stop()
          process.on('exit', function () {
-              rm(`${process.cwd()}/.git`);
+              rm(`${dest}/.git`);
          })
         if (err) {
-            return console.log(chalk.red('下载模板失败： ' + template + ': ' + err.message.trim()))
-        }
+            console.log(chalk.red('下载模板失败： ' + template + ': ' + err.message.trim() + '可能已存在干扰文件'));
 
-        console.log(chalk.green('构建成功'));
+            inquirer.prompt([{
+                type: 'confirm',
+                message: '是否删除该文件后继续构建 ?',
+                name: 'ok'
+            }]).then( function (res) {
+                if (res.ok) {
+                    delDir(dest);
+                    run();
+                }
+            })
+        } else {
+            console.log(chalk.green('构建成功'));
+        }
       });
   } else {
       new Download({ mode: "666", extract: true, strip: os.platform() === 'darwin' ? 1 : 0 }).get(url).dest(dest).run(function(err, files) {
-         console.log(chalk.red('下载失败'));
+          spinner.stop()
+          process.on('exit', function () {
+              rm(`${dest}/.git`);
+          })
+          console.log(chalk.red('下载失败'));
       });
   }
 
+}
+
+//递归删除文件家里面的所有文件
+function delDir(path){
+    let files = [];
+    if(fs.existsSync(path)){
+        files = fs.readdirSync(path);
+        files.forEach((file, index) => {
+            let curPath = path + "/" + file;
+            if(fs.statSync(curPath).isDirectory()){
+                delDir(curPath); //递归删除文件夹
+            } else {
+                fs.unlinkSync(curPath); //删除文件
+            }
+        });
+        fs.rmdirSync(path);
+    }
 }
 
 //格式化地址
