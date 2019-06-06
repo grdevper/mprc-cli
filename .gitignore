@@ -1,0 +1,4 @@
+node_modules
+.DS_Store
+.idea
+.npmignoregit push -u origin master

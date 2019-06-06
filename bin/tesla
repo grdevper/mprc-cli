@@ -1,0 +1,31 @@
+#!/usr/bin/env node
+
+const program = require('commander');
+const package = require('../package');
+const listTemp = require('../lib/list');
+const addTemp = require('../lib/add');
+const deleteTemp = require('../lib/delete');
+
+program.version(package.version) //版本号
+       .usage('<command> [options]');
+
+program.command('list')
+       .alias('l')
+       .description('显示所有模版')
+       .action(listTemp);
+
+program.command('add')
+       .description('添加模版')
+       .action(addTemp);
+
+program.command('delete')
+       .alias('d')
+       .description('删除模版')
+       .action(deleteTemp);
+
+program.command('init', '用一个模板生成项目') // 切不可写成 program.command('init').description('用一个模板生成项目')
+
+program.parse(process.argv);
+if (!program.args.length) { //默认执行help
+    program.help();
+}
