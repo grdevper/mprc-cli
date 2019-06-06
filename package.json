@@ -1,18 +1,22 @@
 {
-  "name": "tesla-cli",
+  "name": "mprc-cli",
   "version": "1.0.0",
   "description": "react通用脚手架",
-  "main": "bin/tesla",
+  "main": "bin/mprc",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "keywords": [
-    "脚手架"
+    "react"
   ],
   "author": "grdevper",
   "bin": {
-    "tesla": "bin/tesla",
-    "tesla-init": "bin/tesla-init"
+    "mprc": "bin/mprc",
+    "mprc-init": "bin/mprc-init"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/grdevper/mprc-cli"
   },
   "engines": {
     "node": ">=4.2.0"
